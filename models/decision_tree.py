@@ -89,89 +89,149 @@ def gain(y_parent, y_left, y_right):
 # Try different features and thresholds to find the split
 # that maximizes Information Gain (reduces entropy the most).
 
+
 def best_split(X, y):
-    # Initialize the best split found so far
+    # Initialize the best split found so far.
     best_gain = -1
     best_feature = None
     best_threshold = None
 
-    # Get the number of samples (rows) and features (columns)
+    # Get the number of training samples and features.
     n_samples, n_features = X.shape
 
-    # Find all unique class labels and count their occurrences
-    # Example: y = [0, 0, 0, 1, 1]
-    # classes = [0, 1], parent_counts = [3, 2]
+    # Identify the unique class labels and count how many
+    # samples belong to each class in the current node.
     classes, parent_counts = np.unique(y, return_counts=True)
 
-    # Calculate parent entropy only once
-    # H(parent) = -sum(p_i * log2(p_i))
+    # Calculate the entropy of the parent node once,
+    # since it is the same for every candidate split.
     parent_entropy = entropy_from_counts(parent_counts)
 
-    # Convert class labels to indices: 0, 1, 2, ...
-    # This also works when original labels are not consecutive
+    # Map the original class labels to consecutive indices
+    # (0, 1, 2, ...) so they can be used in the count matrices.
     encoded_y = np.searchsorted(classes, y)
 
-    # Try every feature (column of X)
+    # Examine each feature to find the split with the
+    # highest Information Gain.
     for feature in range(n_features):
 
-        # Extract all values for the current feature
+        # Sort the samples by the current feature's values.
+        # Apply the same ordering to their class labels.
         values = X[:, feature]
-
-        # Sort feature values and keep their class labels aligned
         sorted_indices = np.argsort(values)
         sorted_values = values[sorted_indices]
         sorted_labels = encoded_y[sorted_indices]
 
-        # Initially, all samples are on the right
-        left_counts = np.zeros(len(classes), dtype=int)
-        right_counts = parent_counts.copy()
+        # Create a Boolean matrix where each row represents
+        # a sample and each column represents a class.
+        # True indicates that the sample belongs to that class.
+        class_matrix = (
+            sorted_labels[:, None] == np.arange(len(classes))
+        )
 
-        # Move samples one by one from right to left
-        for i in range(n_samples - 1):
+        # Calculate the cumulative number of samples from
+        # each class on the left side of every possible split.
+        # Subtract these counts from the parent counts to
+        # obtain the corresponding right-side class counts.
+        left_counts = np.cumsum(class_matrix, axis=0)
+        right_counts = parent_counts - left_counts
 
-            # Get the class of the current sample
-            label = sorted_labels[i]
+        # Determine how many samples are assigned to the
+        # left and right child nodes at each split position.
+        n_left = np.arange(1, n_samples + 1)
+        n_right = n_samples - n_left
 
-            # Move this sample from right to left
-            left_counts[label] += 1
-            right_counts[label] -= 1
+        # Convert class counts into probabilities for the
+        # left child nodes.
+        left_probs = left_counts / n_left[:, None]
 
-            # Skip if the next feature value is identical
-            # We cannot place a threshold between equal values
-            if sorted_values[i] == sorted_values[i + 1]:
-                continue
+        # Calculate class probabilities for the right child
+        # nodes, handling the final empty right group safely.
+        right_probs = np.divide(
+            right_counts,
+            n_right[:, None],
+            out=np.zeros_like(right_counts, dtype=float),
+            where=n_right[:, None] != 0
+        )
 
-            # Number of samples on each side
-            n_left = i + 1
-            n_right = n_samples - n_left
-
-            # Calculate entropy of the two groups
-            left_entropy = entropy_from_counts(left_counts)
-            right_entropy = entropy_from_counts(right_counts)
-
-            # Weighted entropy after splitting
-            # H(children) = (n_left/n)*H(left)
-            #             + (n_right/n)*H(right)
-            children_entropy = (
-                (n_left / n_samples) * left_entropy
-                + (n_right / n_samples) * right_entropy
+        # Apply the entropy formula:
+        # H(S) = -sum(p(c) * log2(p(c)))
+        #
+        # Compute entropy for every candidate split at once.
+        # Classes with probability zero contribute zero.
+        with np.errstate(divide="ignore", invalid="ignore"):
+            left_entropy = -np.sum(
+                np.where(
+                    left_probs > 0,
+                    left_probs * np.log2(left_probs),
+                    0
+                ),
+                axis=1
             )
 
-            # Information Gain = parent entropy - children entropy
-            current_gain = parent_entropy - children_entropy
+            right_entropy = -np.sum(
+                np.where(
+                    right_probs > 0,
+                    right_probs * np.log2(right_probs),
+                    0
+                ),
+                axis=1
+            )
 
-            # Keep the split with the highest Information Gain
-            if current_gain > best_gain:
-                best_gain = current_gain
-                best_feature = feature
+        # Calculate the weighted average entropy of the
+        # two child nodes for every candidate split:
+        #
+        # H(children) = (n_left / n_samples) * H(left)
+        #             + (n_right / n_samples) * H(right)
+        weighted_entropy = (
+            (n_left / n_samples) * left_entropy
+            + (n_right / n_samples) * right_entropy
+        )
 
-                # Threshold is the midpoint of adjacent values
-                best_threshold = (
-                    sorted_values[i] + sorted_values[i + 1]
-                ) / 2
+        # Information Gain measures the reduction in entropy
+        # produced by splitting the parent node:
+        #
+        # IG = H(parent) - H(children)
+        gains = parent_entropy - weighted_entropy
 
-    # Return the best feature, threshold, and Information Gain
+        # A valid split must separate two distinct feature
+        # values. Splitting between equal values is impossible.
+        #
+        # Exclude the final position because it would leave
+        # the right child node empty.
+        valid_splits = sorted_values[:-1] != sorted_values[1:]
+
+        # Skip this feature if no valid threshold exists.
+        if not np.any(valid_splits):
+            continue
+
+        # Exclude invalid split positions by assigning them
+        # negative infinity, so they cannot be selected.
+        valid_gains = gains[:-1].copy()
+        valid_gains[~valid_splits] = -np.inf
+
+        # Find the split position with the highest
+        # Information Gain for the current feature.
+        best_index = np.argmax(valid_gains)
+        current_gain = valid_gains[best_index]
+
+        # Update the overall best split if this feature
+        # produces a greater Information Gain.
+        if current_gain > best_gain:
+            best_gain = current_gain
+            best_feature = feature
+
+            # Choose the midpoint between adjacent feature
+            # values as the threshold for the decision rule.
+            best_threshold = (
+                sorted_values[best_index]
+                + sorted_values[best_index + 1]
+            ) / 2
+
+    # Return the feature, threshold, and Information Gain
+    # of the best split found across all features.
     return best_feature, best_threshold, best_gain
+
 
 # Represents a node in the Decision Tree.
 # A node can be either:
@@ -362,56 +422,6 @@ if __name__ == "__main__":
     print("Accuracy:", accuracy)
     print("Accuracy (%):", accuracy * 100)
 
+    # Verify entropy calculation using class counts
     counts = np.array([7, 3])
-
     print("Entropy from counts:", entropy_from_counts(counts))
-
-
-    # Test sorting feature values while keeping labels aligned
-    X_example = np.array([[6], [2], [8], [1], [4]])
-    y_example = np.array([1, 0, 1, 0, 0])
-
-    # Get the indices that would sort the first feature
-    sorted_indices = np.argsort(X_example[:, 0])
-
-    # Sort feature values and their corresponding labels
-    sorted_values = X_example[sorted_indices, 0]
-    sorted_labels = y_example[sorted_indices]
-
-    print("Sorted indices:", sorted_indices)
-    print("Sorted values:", sorted_values)
-    print("Sorted labels:", sorted_labels)
-
-    
-    # Count samples belonging to each class
-    classes, counts = np.unique(
-        sorted_labels, return_counts=True
-    )
-
-    # Initially, no samples are on the left
-    left_counts = np.zeros(len(classes), dtype=int)
-
-    # All samples start on the right
-    right_counts = counts.copy()
-
-    print("Before moving:")
-    print("Left counts:", left_counts)
-    print("Right counts:", right_counts)
-
-    # Get the class label of the first sorted sample
-    label = sorted_labels[0]
-
-    # Move one sample from right to left
-    left_counts[label] += 1
-    right_counts[label] -= 1
-
-    print("After moving:")
-    print("Left counts:", left_counts)
-    print("Right counts:", right_counts)
-
-
-
-
-
-
-

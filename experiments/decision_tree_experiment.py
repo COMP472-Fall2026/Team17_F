@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from models.decision_tree import DecisionTree
+import time
 
 # Load the training datasets
 image_data = pd.read_csv("data/image_train.csv")
@@ -69,8 +70,14 @@ y_small = y_image_train[:1000]
 # Create a Decision Tree with maximum depth 3
 tree = DecisionTree(max_depth=8)
 
-# Train the Decision Tree
+# Measure the time required to train the Decision Tree
+start_time = time.perf_counter()
+
+# train the decision tree 
 tree.fit(X_small, y_small)
+
+training_time = time.perf_counter() - start_time
+print(f"Image training time: {training_time:.2f} seconds")
 
 # Predict labels for the same 200 samples
 predictions = tree.predict(X_small)
@@ -101,8 +108,13 @@ y_sent_small = y_sent_train[:2000]
 # Create a Decision Tree with maximum depth 5
 sent_tree = DecisionTree(max_depth=5)
 
-# Train the model
+# Measure the time required to train the sentiment Decision Tree
+sent_start_time = time.perf_counter()
+# train the model
 sent_tree.fit(X_sent_small, y_sent_small)
+
+sent_training_time = time.perf_counter() - sent_start_time
+print(f"Sentiment training time: {sent_training_time:.2f} seconds")
 
 # Calculate training accuracy
 sent_train_predictions = sent_tree.predict(X_sent_small)
