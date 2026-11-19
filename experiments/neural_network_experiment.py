@@ -42,18 +42,8 @@ X_train, X_val, y_train, y_val = train_test_split(
     random_state=42,
     stratify=y
 )
-# Standardize the features
-#scaler = StandardScaler()
 
-#X_train = scaler.fit_transform(X_train)
-#X_val = scaler.transform(X_val)
-    #StandardScaler() creates the scaler.
-    #fit_transform(X_train) calculates the mean and standard deviation of each feature 
-        # using only the training data, then standardizes it.
-    #transform(X_val) standardizes the validation data using those same training statistics.
-    #This avoids data leakage, because the validation data doesn't influence the scaling parameters.
-
-# Convert standardized features into PyTorch tensors
+# Convert input features into PyTorch tensors
 X_train = torch.tensor(X_train.to_numpy(), dtype=torch.float32)
 X_val = torch.tensor(X_val.to_numpy(), dtype=torch.float32)
 
@@ -101,321 +91,373 @@ print("Validation batches:", len(val_loader))
     # the model initialization, 
     # and the batch order.
 
-# Experiment 1: Learning rate = 0.001
-#torch.manual_seed(42)
-#model_1 = NeuralNetwork(input_size=500, num_classes=50)
 
-#train_generator.manual_seed(42)
+# Experiment 1: Learning Rate = 0.001
+def experiment_1():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#history_1 = train_torch_model(
-    #model_1,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.001
-#)
+    model_1 = NeuralNetwork(
+        input_size=500,
+        num_classes=50
+    )
 
-# Experiment 2: Learning rate = 0.0001
-#torch.manual_seed(42)
-#model_2 = NeuralNetwork(input_size=500, num_classes=50)
+    history_1 = train_torch_model(
+        model_1,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001
+    )
 
-#train_generator.manual_seed(42)
+    best_accuracy = max(history_1["val_accuracy"])
+    best_epoch = history_1["val_accuracy"].index(best_accuracy) + 1
 
-#history_2 = train_torch_model(
-    #model_2,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.0001
-#)
-
-# Summarize the two learning-rate experiments
-#for lr, history in [(0.001, history_1), (0.0001, history_2)]:
-
-    #best_accuracy = max(history["val_accuracy"])
-    #best_epoch = history["val_accuracy"].index(best_accuracy) + 1
-
-    #print(f"\nLearning Rate: {lr}")
-    #print(f"Best Validation Accuracy: {best_accuracy:.4f}")
-    #print(f"Best Epoch: {best_epoch}")
-    #print(f"Final Training Accuracy: {history['train_accuracy'][-1]:.4f}")
-    #print(f"Final Validation Accuracy: {history['val_accuracy'][-1]:.4f}")
+    print("\nExperiment 1: Learning Rate = 0.001")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
+    print("Final Training Accuracy:", history_1["train_accuracy"][-1])
 
 
-# Experiment 3: Neural Network with Dropout
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
+# Experiment 2: Learning Rate = 0.0001
+def experiment_2():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#model_3 = NeuralNetwork(
-    #input_size=500,
-    #num_classes=50,
-    #dropout=0.3
-#)
+    model_2 = NeuralNetwork(
+        input_size=500,
+        num_classes=50
+    )
 
-#history_3 = train_torch_model(
-    #model_3,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.001
-#)
+    history_2 = train_torch_model(
+        model_2,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.0001
+    )
 
-#torch.save(model_3.state_dict(), "best_neural_network.pth")
+    best_accuracy = max(history_2["val_accuracy"])
+    best_epoch = history_2["val_accuracy"].index(best_accuracy) + 1
 
-#best_accuracy = max(history_3["val_accuracy"])
-#best_epoch = history_3["val_accuracy"].index(best_accuracy) + 1
+    print("\nExperiment 2: Learning Rate = 0.0001")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
+    print("Final Training Accuracy:", history_2["train_accuracy"][-1])
 
-#print("Dropout 0.3 - Best Validation Accuracy:", best_accuracy)
-#print("Best Epoch:", best_epoch)
 
 
-# Experiment 4: Dropout 0.5
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
 
-#model_4 = NeuralNetwork(
-    #input_size=500,
-    #num_classes=50,
-    #dropout=0.5
-#)
+# Experiment 3: Dropout = 0.3
+def experiment_3():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#history_4 = train_torch_model(
-    #model_4,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.001
-#)
+    model_3 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.3
+    )
 
-#best_accuracy_4 = max(history_4["val_accuracy"])
-#best_epoch_4 = history_4["val_accuracy"].index(best_accuracy_4) + 1
+    history_3 = train_torch_model(
+        model_3,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001
+    )
 
-#print("Dropout 0.5 - Best Validation Accuracy:", best_accuracy_4)
-#print("Best Epoch:", best_epoch_4)
+    best_accuracy = max(history_3["val_accuracy"])
+    best_epoch = history_3["val_accuracy"].index(best_accuracy) + 1
+
+    print("\nExperiment 3: Dropout 0.3")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
+
+    torch.save(
+        model_3.state_dict(),
+        "best_neural_network.pth"
+    )
+
+
+# Experiment 4: Dropout = 0.5
+def experiment_4():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
+
+    model_4 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.5
+    )
+
+    history_4 = train_torch_model(
+        model_4,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001
+    )
+
+    best_accuracy = max(history_4["val_accuracy"])
+    best_epoch = history_4["val_accuracy"].index(best_accuracy) + 1
+
+    print("\nExperiment 4: Dropout 0.5")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
+
 
 # Experiment 5: Dropout 0.3 + Weight Decay
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
+def experiment_5():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#model_5 = NeuralNetwork(
-    #input_size=500,
-    #num_classes=50,
-    #dropout=0.3
-#)
+    model_5 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.3
+    )
 
-#history_5 = train_torch_model(
-    #model_5,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.001,
-    #weight_decay=0.0001
-#)
+    history_5 = train_torch_model(
+        model_5,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001,
+        weight_decay=0.0001
+    )
 
-#best_accuracy_5 = max(history_5["val_accuracy"])
-#best_epoch_5 = history_5["val_accuracy"].index(best_accuracy_5) + 1
+    best_accuracy = max(history_5["val_accuracy"])
+    best_epoch = history_5["val_accuracy"].index(best_accuracy) + 1
 
-#print("Dropout 0.3 + Weight Decay 0.0001")
-#print("Best Validation Accuracy:", best_accuracy_5)
-#print("Best Epoch:", best_epoch_5)
+    print("\nExperiment 5: Dropout 0.3 + Weight Decay 0.0001")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
 
-# Experiment 6: Dropout 0.3 + Standardized Features
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
 
-#model_6 = NeuralNetwork(
-    #input_size=500,
-    #num_classes=50,
-    #dropout=0.3
-#)
+# Experiment 6: Smaller Neural Network
+def experiment_6():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#history_6 = train_torch_model(
-    #model_6,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.001,
-    #weight_decay=0.0
-#)
+    model_6 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.3,
+        hidden_size=128
+    )
 
-#best_accuracy_6 = max(history_6["val_accuracy"])
-#best_epoch_6 = history_6["val_accuracy"].index(best_accuracy_6) + 1
+    history_6 = train_torch_model(
+        model_6,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001,
+        weight_decay=0.0
+    )
 
-#print("Experiment 6: Standardized Features")
-#print("Best Validation Accuracy:", best_accuracy_6)
-#print("Best Epoch:", best_epoch_6)
+    best_accuracy = max(history_6["val_accuracy"])
+    best_epoch = history_6["val_accuracy"].index(best_accuracy) + 1
 
-# Experiment 7: Standardized Features + Lower Learning Rate
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
+    print("\nExperiment 8: Smaller Neural Network")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
 
-#model_7 = NeuralNetwork(
-    #input_size=500,
-    #num_classes=50,
-    #dropout=0.3
-#)
 
-#history_7 = train_torch_model(
-    #model_7,
-    #train_loader,
-    #val_loader,
-    #epochs=50,
-    #lr=0.0001,
-    #weight_decay=0.0
-#)
+# Experiment 7: Dropout 0.4
+def experiment_7():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#best_accuracy_7 = max(history_7["val_accuracy"])
-#best_epoch_7 = history_7["val_accuracy"].index(best_accuracy_7) + 1
+    model_7 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.4,
+        hidden_size=256
+    )
 
-#print("Experiment 7: Standardized + LR 0.0001")
-#print("Best Validation Accuracy:", best_accuracy_7)
-#print("Best Epoch:", best_epoch_7)
+    history_7 = train_torch_model(
+        model_7,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001,
+        weight_decay=0.0
+    )
 
-# Experiment 8: Smaller Neural Network
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
+    best_accuracy = max(history_7["val_accuracy"])
+    best_epoch = history_7["val_accuracy"].index(best_accuracy) + 1
 
-#model_8 = NeuralNetwork(
-#    input_size=500,
-#    num_classes=50,
-#    dropout=0.3,
-#    hidden_size=128
-#)
+    print("\nExperiment 9: Dropout 0.4")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
 
-#history_8 = train_torch_model(
-#    model_8,
-#    train_loader,
-#    val_loader,
-#    epochs=50,
-#    lr=0.001,
-#    weight_decay=0.0
-#)
+    torch.save(
+        model_7.state_dict(),
+        "best_neural_network_dropout_04.pth"
+    )
 
-#best_accuracy_8 = max(history_8["val_accuracy"])
-#best_epoch_8 = history_8["val_accuracy"].index(best_accuracy_8) + 1
 
-#print("Experiment 8: Smaller Neural Network")
-#print("Best Validation Accuracy:", best_accuracy_8)
-#print("Best Epoch:", best_epoch_8)
+# Experiment 8: Dropout 0.2
+def experiment_8():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-# Experiment 9: Dropout 0.4
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
+    model_8 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.2,
+        hidden_size=256
+    )
 
-#model_9 = NeuralNetwork(
-#    input_size=500,
-#    num_classes=50,
-#    dropout=0.4,
-#    hidden_size=256
-#)
+    history_8 = train_torch_model(
+        model_8,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001,
+        weight_decay=0.0
+    )
 
-#history_9 = train_torch_model(
-#    model_9,
-#    train_loader,
-#    val_loader,
-#    epochs=50,
-#    lr=0.001,
-#    weight_decay=0.0
-#)
+    best_accuracy = max(history_8["val_accuracy"])
+    best_epoch = history_8["val_accuracy"].index(best_accuracy) + 1
 
-#best_accuracy_9 = max(history_9["val_accuracy"])
-#best_epoch_9 = history_9["val_accuracy"].index(best_accuracy_9) + 1
+    print("\nExperiment 10: Dropout 0.2")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
 
-#print("Experiment 9: Dropout 0.4")
-#print("Best Validation Accuracy:", best_accuracy_9)
-#print("Best Epoch:", best_epoch_9)
 
-#torch.save(
-#    model_9.state_dict(),
-#    "best_neural_network_dropout_04.pth"
-#)
 
-# Experiment 10: Dropout 0.2
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
 
-#model_10 = NeuralNetwork(
-#    input_size=500,
-#    num_classes=50,
-#    dropout=0.2,
-#    hidden_size=256
-#)
+# Experiment 9: Dropout 0.4 + Learning Rate 0.0005
+def experiment_9():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#history_10 = train_torch_model(
-#    model_10,
-#    train_loader,
-#    val_loader,
-#    epochs=50,
-#    lr=0.001,
-#    weight_decay=0.0
-#)
+    model_9 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.4,
+        hidden_size=256
+    )
 
-#best_accuracy_10 = max(history_10["val_accuracy"])
-#best_epoch_10 = history_10["val_accuracy"].index(best_accuracy_10) + 1
+    history_9 = train_torch_model(
+        model_9,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.0005,
+        weight_decay=0.0
+    )
 
-#print("Experiment 10: Dropout 0.2")
-#print("Best Validation Accuracy:", best_accuracy_10)
-#print("Best Epoch:", best_epoch_10)
+    best_accuracy = max(history_9["val_accuracy"])
+    best_epoch = history_9["val_accuracy"].index(best_accuracy) + 1
 
-# Experiment 11: Dropout 0.4, Learning Rate 0.0005
-# Experiment 12: Dropout 0.4, Learning Rate 0.002
-#torch.manual_seed(42)
-#train_generator.manual_seed(42)
+    print("\nExperiment 9: Dropout 0.4 + LR 0.0005")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
 
-#model_12 = NeuralNetwork(
-#    input_size=500,
-#    num_classes=50,
-#    dropout=0.4,
-#    hidden_size=256
-#)
 
-#history_12 = train_torch_model(
-#    model_12,
-#    train_loader,
-#    val_loader,
-#    epochs=50,
-#    lr=0.002,
-#    weight_decay=0.0
-#)
+# Experiment 10: Dropout 0.4 + Learning Rate 0.002
+def experiment_10():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-#best_accuracy_12 = max(history_12["val_accuracy"])
-#best_epoch_12 = history_12["val_accuracy"].index(best_accuracy_12) + 1
+    model_10 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.4,
+        hidden_size=256
+    )
 
-#print("Experiment 12: Dropout 0.4, LR 0.002")
-#print("Best Validation Accuracy:", best_accuracy_12)
-#print("Best Epoch:", best_epoch_12)
+    history_10 = train_torch_model(
+        model_10,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.002,
+        weight_decay=0.0
+    )
 
-#Experiment 14: Batch Normalization
-torch.manual_seed(42)
-train_generator.manual_seed(42)
+    best_accuracy = max(history_10["val_accuracy"])
+    best_epoch = history_10["val_accuracy"].index(best_accuracy) + 1
 
-model_14 = NeuralNetwork(
-    input_size=500,
-    num_classes=50,
-    dropout=0.4,
-    hidden_size=256,
-    use_batch_norm=True
-)
+    print("\nExperiment 10: Dropout 0.4 + LR 0.002")
+    print("Best Validation Accuracy:", best_accuracy)
+    print("Best Epoch:", best_epoch)
 
-history_14 = train_torch_model(
-    model_14,
-    train_loader,
-    val_loader,
-    epochs=50,
-    lr=0.001,
-    weight_decay=0.0
-)
 
-best_accuracy_14 = max(history_14["val_accuracy"])
-best_epoch_14 = history_14["val_accuracy"].index(best_accuracy_14) + 1
 
-print("Experiment 14: Batch Normalization")
-print("Best Validation Accuracy:", best_accuracy_14)
-print("Best Epoch:", best_epoch_14)
-print("Final Training Accuracy:", history_14["train_accuracy"][-1])
+# Experiment 14: Batch Normalization
+def experiment_11():
+    torch.manual_seed(42)
+    train_generator.manual_seed(42)
 
-torch.save(
-    model_14.state_dict(),
-    "best_neural_network_batch_norm.pth"
-)
-# Experiment 15: Batch Normalization + Dropout 0.3 --> validation accuracy dropped, training accuracy increased
+    model_11 = NeuralNetwork(
+        input_size=500,
+        num_classes=50,
+        dropout=0.4,
+        hidden_size=256,
+        use_batch_norm=True
+    )
+
+    history_11 = train_torch_model(
+        model_11,
+        train_loader,
+        val_loader,
+        epochs=50,
+        lr=0.001,
+        weight_decay=0.0
+    )
+
+    best_accuracy_14 = max(history_11["val_accuracy"])
+    best_epoch_14 = history_11["val_accuracy"].index(best_accuracy_14) + 1
+
+    print("\nExperiment 14: Batch Normalization")
+    print("Best Validation Accuracy:", best_accuracy_14)
+    print("Best Epoch:", best_epoch_14)
+    print("Final Training Accuracy:", history_11["train_accuracy"][-1])
+
+    torch.save(
+        model_11.state_dict(),
+        "best_neural_network_batch_norm.pth"
+    )
+
+
+if __name__ == "__main__":
+    experiment = 11
+
+    if experiment == 1:
+        experiment_1()
+
+    elif experiment == 2:
+        experiment_2()
+
+    elif experiment == 3:
+        experiment_3()
+
+    elif experiment == 4:
+        experiment_4()
+
+    elif experiment == 5:
+        experiment_5()
+
+    elif experiment == 6:
+        experiment_6()
+
+    elif experiment == 7:
+        experiment_7()
+
+    elif experiment == 8:
+        experiment_8()
+    
+    elif experiment == 9:
+        experiment_9()
+
+    elif experiment == 10:
+        experiment_10()
+
+    elif experiment == 11:
+        experiment_11()
+    else:
+        print("Invalid experiment number.")
