@@ -1,35 +1,18 @@
-
 import numpy as np
 
 
-def gini_impurity(y):
-    if len(y) == 0:
-        return 0.0
-
-    classes, counts = np.unique(y, return_counts=True)
-    probabilities = counts / len(y)
-
-    gini = 1 - np.sum(probabilities ** 2)
-
-    return gini
-
-
 def entropy(y):
-    # If the node contains no samples, return 0
-    if len(y) == 0:
+    if len(y) == 0:     # Return 0 if there are no samples
         return 0.0
 
-    # Count the number of samples belonging to each class
-    # Example: y = [0, 0, 0, 1, 1] -> classes = [0, 1], counts = [3, 2]
-    classes, counts = np.unique(y, return_counts=True)
+    classes, counts = np.unique(y, return_counts=True)      # Count the number of samples belonging to each class
+                                                            # Example: y = [0, 0, 0, 1, 1] -> classes = [0, 1], counts = [3, 2]
 
-    # Calculate the probability of each class: P(class_i) = count_i / N
-    # Example: probabilities = [3/5, 2/5] = [0.6, 0.4]
-    probabilities = counts / len(y)
+    probabilities = counts / len(y)        # Calculate the probability of each class: P(class_i) = count_i / N
+                                            # P(class_i) = count_i / total samples
 
-    # Calculate Entropy: H(Y) = -sum(P(class_i) * log2(P(class_i)))
-    # Example: H(Y) = -(0.6*log2(0.6) + 0.4*log2(0.4)) = 0.971
-    return -np.sum(probabilities * np.log2(probabilities))
+    return -np.sum(probabilities * np.log2(probabilities))      # Calculate entropy: H(Y) = -sum(p_i * log2(p_i))
+                                                                # Higher entropy indicates greater class uncertainty
 
 
 
@@ -37,83 +20,59 @@ def entropy(y):
 # This avoids recounting labels when evaluating different splits
 def entropy_from_counts(counts):
 
-    # Calculate the total number of samples: N = sum(counts)
-    # Example: counts = [7, 3] -> total = 10
-    total = np.sum(counts)
+    total = np.sum(counts) # Calculate the total number of samples
 
-    # If there are no samples, return 0 to avoid division by zero
-    if total == 0:
+    if total == 0:  # Return 0 if there are no samples
         return 0.0
 
-    # Calculate class probabilities: P(class_i) = count_i / N
-    # Ignore classes with count=0 to avoid log2(0)
-    # Example: [7, 3] / 10 = [0.7, 0.3]
-    probabilities = counts[counts > 0] / total
+    probabilities = counts[counts > 0] / total          # Calculate class probabilities: P(class_i) = count_i / N
+                                                        # Ignore classes with count=0 to avoid log2(0)
+                                                        # Example: [7, 3] / 10 = [0.7, 0.3]
 
-    # Calculate Entropy: H(Y) = -sum(P(class_i) * log2(P(class_i)))
-    # Example: -(0.7*log2(0.7) + 0.3*log2(0.3)) = 0.8813
-    return -np.sum(probabilities * np.log2(probabilities))
-
+    return -np.sum(probabilities * np.log2(probabilities))  # Calculate Entropy: H(Y) = -sum(P(class_i) * log2(P(class_i)))
 
 
 
 def gain(y_parent, y_left, y_right):
-    # Calculate parent entropy
-    parent_entropy = entropy(y_parent)
+
+    parent_entropy = entropy(y_parent)  # Calculate parent node entropy
 
     # Count the total samples (N) and samples in each child (N_left, N_right)
     n = len(y_parent)
     n_left = len(y_left)
     n_right = len(y_right)
 
-    # Avoid division by zero if the parent node is empty
-    if n == 0:
+    if n == 0:      # Return 0 if the parent node is empty
         return 0.0
-
-    # Calculate the weighted entropy after splitting:
-    # H(children) = (N_left/N)*H(Y_left) + (N_right/N)*H(Y_right)
-    # Each child's entropy is weighted by its proportion of samples
-    children_entropy = (
-        (n_left / n) * entropy(y_left)
+    
+    children_entropy = (                    # Calculate the weighted entropy of the child nodes
+        (n_left / n) * entropy(y_left)      # H(children) = (N_left/N)*H(left) + (N_right/N)*H(right)
         + (n_right / n) * entropy(y_right)
     )
 
-
-    # Information Gain = H(parent) - H(children)
-    # Higher gain means the split reduces more uncertainty
-    gain = parent_entropy - children_entropy
-
+    gain = parent_entropy - children_entropy        # Information Gain = H(parent) - H(children)
+                                                    # Higher gain means the split reduces more uncertainty
     return gain
 
-
-# Try different features and thresholds to find the split
-# that maximizes Information Gain (reduces entropy the most).
-
-
-def best_split(X, y):
+#best_split() function finds the feature and threshold that produce the highest information gain.
+def best_split(X, y, min_samples_leaf=1):   
+    
     # Initialize the best split found so far.
     best_gain = -1
     best_feature = None
     best_threshold = None
 
-    # Get the number of training samples and features.
-    n_samples, n_features = X.shape
+    n_samples, n_features = X.shape # Get the number of samples and features.
 
-    # Identify the unique class labels and count how many
-    # samples belong to each class in the current node.
-    classes, parent_counts = np.unique(y, return_counts=True)
+    classes, parent_counts = np.unique(y, return_counts=True)   # Count the samples belonging to each class
 
-    # Calculate the entropy of the parent node once,
-    # since it is the same for every candidate split.
-    parent_entropy = entropy_from_counts(parent_counts)
+    parent_entropy = entropy_from_counts(parent_counts)     # Calculate parent entropy once for all candidate splits
 
-    # Map the original class labels to consecutive indices
-    # (0, 1, 2, ...) so they can be used in the count matrices.
+    # Encode class labels as consecutive indices (0, 1, 2, ...)
+    # These indices are used to calculate class counts efficiently
     encoded_y = np.searchsorted(classes, y)
 
-    # Examine each feature to find the split with the
-    # highest Information Gain.
-    for feature in range(n_features):
+    for feature in range(n_features):   # Evaluate each feature to find the split with the highest information gain
 
         # Sort the samples by the current feature's values.
         # Apply the same ordering to their class labels.
@@ -141,12 +100,10 @@ def best_split(X, y):
         n_left = np.arange(1, n_samples + 1)
         n_right = n_samples - n_left
 
-        # Convert class counts into probabilities for the
-        # left child nodes.
-        left_probs = left_counts / n_left[:, None]
+        left_probs = left_counts / n_left[:, None]  # Calculate class probabilities for the left child at each split
 
         # Calculate class probabilities for the right child
-        # nodes, handling the final empty right group safely.
+        # Handle the last position where the right child is empty
         right_probs = np.divide(
             right_counts,
             n_right[:, None],
@@ -154,11 +111,9 @@ def best_split(X, y):
             where=n_right[:, None] != 0
         )
 
-        # Apply the entropy formula:
-        # H(S) = -sum(p(c) * log2(p(c)))
-        #
-        # Compute entropy for every candidate split at once.
-        # Classes with probability zero contribute zero.
+        # Calculate entropy for the left and right children
+        # H(S) = -sum(p_i * log2(p_i))
+        # Classes with probability 0 do not contribute to entropy
         with np.errstate(divide="ignore", invalid="ignore"):
             left_entropy = -np.sum(
                 np.where(
@@ -178,28 +133,25 @@ def best_split(X, y):
                 axis=1
             )
 
-        # Calculate the weighted average entropy of the
-        # two child nodes for every candidate split:
-        #
-        # H(children) = (n_left / n_samples) * H(left)
-        #             + (n_right / n_samples) * H(right)
+        # Calculate the weighted entropy of the two child nodes
+        # H(children) = (N_left/N)*H(left) + (N_right/N)*H(right)
         weighted_entropy = (
             (n_left / n_samples) * left_entropy
             + (n_right / n_samples) * right_entropy
         )
 
-        # Information Gain measures the reduction in entropy
-        # produced by splitting the parent node:
-        #
-        # IG = H(parent) - H(children)
+        # Calculate information gain for every possible split
+        # IG = H(parent) - H(children
         gains = parent_entropy - weighted_entropy
 
-        # A valid split must separate two distinct feature
-        # values. Splitting between equal values is impossible.
-        #
-        # Exclude the final position because it would leave
-        # the right child node empty.
-        valid_splits = sorted_values[:-1] != sorted_values[1:]
+        # A valid split must:
+        # 1. Separate two different feature values
+        # 2. Leave at least min_samples_leaf samples in each child
+        valid_splits = (
+            (sorted_values[:-1] != sorted_values[1:])
+            & (n_left[:-1] >= min_samples_leaf)
+            & (n_right[:-1] >= min_samples_leaf)
+        )
 
         # Skip this feature if no valid threshold exists.
         if not np.any(valid_splits):
@@ -221,16 +173,15 @@ def best_split(X, y):
             best_gain = current_gain
             best_feature = feature
 
-            # Choose the midpoint between adjacent feature
-            # values as the threshold for the decision rule.
+            # Choose the midpoint between adjacent feature values as the threshold for the decision rule.
             best_threshold = (
                 sorted_values[best_index]
                 + sorted_values[best_index + 1]
             ) / 2
 
-    # Return the feature, threshold, and Information Gain
-    # of the best split found across all features.
+    # Return the best feature, threshold, and information gain
     return best_feature, best_threshold, best_gain
+
 
 
 # Represents a node in the Decision Tree.
@@ -246,11 +197,11 @@ class Node:
         right=None,
         value=None
     ):
-        self.feature = feature
-        self.threshold = threshold
-        self.left = left
+        self.feature = feature  # Feature index used to split the samples
+        self.threshold = threshold  # Threshold used to determine the left or right child
+        self.left = left    # References to the child nodes
         self.right = right
-        self.value = value
+        self.value = value  # Predicted class label (only assigned to leaf nodes)
 
     # Check whether the node is a leaf (has a predicted class)
     def is_leaf(self):
@@ -259,18 +210,21 @@ class Node:
     
 class DecisionTree:
     
+    def __init__(
+        self,
+        max_depth=5,
+        min_samples_split=2,
+        min_samples_leaf=1
+    ):
+        self.max_depth = max_depth  # Maximum depth allowed for the tree
+        self.min_samples_split = min_samples_split  # Minimum number of samples required to split a node
+        self.min_samples_leaf = min_samples_leaf    # Minimum number of samples required in each child node
+        self.root = None    # Root node of the Decision Tree (created during training)
 
-    def __init__(self, max_depth=5):     
-        # Maximum depth allowed for the tree to prevent overfitting
-        # Example: max_depth=5 means the tree can split up to depth 5 --> hyperparameter
-        self.max_depth = max_depth
-        self.root = None
 
     #Start training
     def fit(self, X, y):
-        # Train the tree using features X and class labels y
-        # Start building from the root at depth 0
-        self.root = self._grow_tree(X, y, depth=0)
+        self.root = self._grow_tree(X, y, depth=0) # Start building the Decision Tree from the root node at depth 0
 
     def _grow_tree(self, X, y, depth):
 
@@ -283,15 +237,20 @@ class DecisionTree:
         majority_class = classes[np.argmax(counts)]
 
         # Stopping conditions:
-        # 1. Node is pure (all samples belong to the same class)
-        # 2. Maximum tree depth has been reached
-        # In either case, create a leaf predicting the majority class
-        if len(classes) == 1 or depth >= self.max_depth:
+        # 1. All samples belong to the same class
+        # 2. The maximum depth has been reached
+        # 3. There are fewer samples than min_samples_split
+        if (
+            len(classes) == 1
+            or depth >= self.max_depth
+            or len(y) < self.min_samples_split
+        ):
             return Node(value=majority_class)
 
-        # Find the feature and threshold with maximum Information Gain
-        # IG = H(parent) - weighted H(children)
-        feature, threshold, best_gain = best_split(X, y)
+        # Find the feature and threshold with the highest information gain
+        feature, threshold, best_gain = best_split(
+        X, y, min_samples_leaf=self.min_samples_leaf
+        )
 
         # If no valid split exists or Information Gain <= 0,
         # stop growing and create a leaf using majority voting
@@ -321,7 +280,7 @@ class DecisionTree:
             right=right_child
         )
 
-    
+    # Predict the class label for each sample
     def predict(self, X):
         predictions = []
 
@@ -354,22 +313,37 @@ class DecisionTree:
             return self._predict_sample(sample, node.right)
 
 
-
-
-
-
-# Test our Gini impurity function
 if __name__ == "__main__":
+
+    # --------------------------------------------------
+    # Test 1: Entropy and Information Gain
+    # --------------------------------------------------
+    print("\n--- Test 1: Entropy and Information Gain ---")
+
     labels = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 1])
-    print("Entropy:", entropy(labels))
-    
     left = np.array([0, 0, 0, 0, 0])
     right = np.array([0, 0, 1, 1, 1])
 
-    print("Gain:", gain(labels, left, right))
+    counts = np.array([7, 3])
 
-    print("Gini impurity:", gini_impurity(labels))
+    entropy_value = entropy(labels)
+    entropy_counts = entropy_from_counts(counts)
+    information_gain = gain(labels, left, right)
 
+    assert np.isclose(entropy_value, 0.8812908992)
+    assert np.isclose(entropy_counts, entropy_value)
+    assert np.isclose(information_gain, 0.3958156020)
+
+    print("Entropy:", entropy_value)
+    print("Entropy from counts:", entropy_counts)
+    print("Information gain:", information_gain)
+    print("Test passed!")
+
+
+    # --------------------------------------------------
+    # Test 2: Best Split (Single Feature)
+    # --------------------------------------------------
+    print("\n--- Test 2: Best Split (Single Feature) ---")
 
     X_test = np.array([
         [0.10],
@@ -380,26 +354,111 @@ if __name__ == "__main__":
 
     y_test = np.array([0, 0, 1, 1])
 
-    feature, threshold, score = best_split(X_test, y_test)
+    feature, threshold, information_gain = best_split(X_test, y_test)
+
+    assert feature == 0
+    assert np.isclose(threshold, 0.45)
+    assert np.isclose(information_gain, 1.0)
 
     print("Best feature:", feature)
     print("Best threshold:", threshold)
-    print("Best gain:", score)
+    print("Information gain:", information_gain)
+    print("Test passed!")
+
+
+    # --------------------------------------------------
+    # Test 3: Best Split (Multiple Features)
+    # --------------------------------------------------
+    print("\n--- Test 3: Best Split (Multiple Features) ---")
+
+    X_test = np.array([
+        [0.1, 0.8],
+        [0.2, 0.3],
+        [0.3, 0.6],
+        [0.7, 0.2],
+        [0.8, 0.9],
+        [0.9, 0.4]
+    ])
+
+    y_test = np.array([0, 0, 0, 1, 1, 1])
+
+    feature, threshold, information_gain = best_split(X_test, y_test)
+
+    assert feature == 0
+    assert np.isclose(threshold, 0.5)
+    assert np.isclose(information_gain, 1.0)
+
+    print("Best feature:", feature)
+    print("Best threshold:", threshold)
+    print("Information gain:", information_gain)
+    print("Test passed!")
+
+
+    # --------------------------------------------------
+    # Test 4: Mixed Classes and Duplicate Values
+    # --------------------------------------------------
+    print("\n--- Test 4: Mixed Classes and Duplicate Values ---")
+
+    X_test = np.array([
+        [0.1],
+        [0.1],
+        [0.2],
+        [0.8],
+        [0.9],
+        [0.9]
+    ])
+
+    y_test = np.array([0, 0, 1, 1, 1, 0])
+
+    feature, threshold, information_gain = best_split(X_test, y_test)
+
+    assert feature == 0
+    assert np.isclose(threshold, 0.15)
+    assert np.isclose(information_gain, 0.459147917)
+
+    print("Best feature:", feature)
+    print("Best threshold:", threshold)
+    print("Information gain:", information_gain)
+    print("Test passed!")
+
+
+    # --------------------------------------------------
+    # Test 5: Node Class
+    # --------------------------------------------------
+    print("\n--- Test 5: Node Class ---")
 
     decision_node = Node(feature=0, threshold=0.45)
     leaf_node = Node(value=1)
 
+    assert not decision_node.is_leaf()
+    assert leaf_node.is_leaf()
+
     print("Decision node is leaf:", decision_node.is_leaf())
     print("Leaf node is leaf:", leaf_node.is_leaf())
+    print("Test passed!")
+
+
+    # --------------------------------------------------
+    # Test 6: Decision Tree Training and Prediction
+    # --------------------------------------------------
+    print("\n--- Test 6: Training and Prediction ---")
+
+    X_train = np.array([
+        [0.10],
+        [0.20],
+        [0.70],
+        [0.90]
+    ])
+
+    y_train = np.array([0, 0, 1, 1])
 
     tree = DecisionTree(max_depth=3)
-    tree.fit(X_test, y_test)
+    tree.fit(X_train, y_train)
 
-    print("Root feature:", tree.root.feature)
-    print("Root threshold:", tree.root.threshold)
-    print("Left prediction:", tree.root.left.value)
-    print("Right prediction:", tree.root.right.value)
-
+    assert tree.root.feature == 0
+    assert np.isclose(tree.root.threshold, 0.45)
+    assert tree.root.left.value == 0
+    assert tree.root.right.value == 1
 
     new_samples = np.array([
         [0.15],
@@ -408,20 +467,110 @@ if __name__ == "__main__":
         [0.95]
     ])
 
+    true_labels = np.array([0, 1, 0, 1])
     predictions = tree.predict(new_samples)
 
-    print("Predictions:", predictions)
-
-
-    # Correct labels for our four new samples
-    true_labels = np.array([0, 1, 0, 1])
-
-    # Compare predictions with correct labels
     accuracy = np.mean(predictions == true_labels)
 
-    print("Accuracy:", accuracy)
-    print("Accuracy (%):", accuracy * 100)
+    assert np.array_equal(predictions, true_labels)
+    assert np.isclose(accuracy, 1.0)
 
-    # Verify entropy calculation using class counts
-    counts = np.array([7, 3])
-    print("Entropy from counts:", entropy_from_counts(counts))
+    print("Root feature:", tree.root.feature)
+    print("Root threshold:", tree.root.threshold)
+    print("Predictions:", predictions)
+    print("Accuracy (%):", accuracy * 100)
+    print("Test passed!")
+
+
+    # --------------------------------------------------
+    # Test 7: Compare Optimized and Simple Best Split
+    # --------------------------------------------------
+    print("\n--- Test 7: Randomized Split Comparisons ---")
+
+    # Simple implementation used as a reference
+    def simple_best_split(X, y):
+        best_gain = -1
+        best_feature = None
+        best_threshold = None
+
+        for feature in range(X.shape[1]):
+            values = np.unique(X[:, feature])
+
+            for i in range(len(values) - 1):
+                threshold = (values[i] + values[i + 1]) / 2
+
+                left_y = y[X[:, feature] <= threshold]
+                right_y = y[X[:, feature] > threshold]
+
+                current_gain = gain(y, left_y, right_y)
+
+                if current_gain > best_gain:
+                    best_gain = current_gain
+                    best_feature = feature
+                    best_threshold = threshold
+
+        return best_feature, best_threshold, best_gain
+
+
+    rng = np.random.default_rng(42)
+
+    for test_number in range(100):
+        X_test = rng.integers(0, 5, size=(20, 4)).astype(float)
+        y_test = rng.integers(0, 3, size=20)
+
+        optimized = best_split(X_test, y_test)
+        reference = simple_best_split(X_test, y_test)
+
+        assert optimized[0] == reference[0]
+        assert np.isclose(optimized[1], reference[1])
+        assert np.isclose(optimized[2], reference[2])
+
+    print("All 100 comparison tests passed!")
+
+
+    # --------------------------------------------------
+    # Test 8: Minimum Samples Required to Split
+    # --------------------------------------------------
+    print("\n--- Test 8: min_samples_split ---")
+
+    X_test = np.array([
+        [0.1],
+        [0.2],
+        [0.8],
+        [0.9]
+    ])
+
+    y_test = np.array([0, 0, 1, 1])
+
+    # The node has 4 samples but requires at least 5 to split
+    tree = DecisionTree(max_depth=5, min_samples_split=5)
+    tree.fit(X_test, y_test)
+
+    assert tree.root.is_leaf()
+
+    print("min_samples_split test passed!")
+
+
+    # --------------------------------------------------
+    # Test 9: Minimum Samples Required in Each Leaf
+    # --------------------------------------------------
+    print("\n--- Test 9: min_samples_leaf ---")
+
+    # Four samples cannot be split into two groups of at least 3
+    tree = DecisionTree(
+        max_depth=5,
+        min_samples_split=2,
+        min_samples_leaf=3
+    )
+
+    tree.fit(X_test, y_test)
+
+    assert tree.root.is_leaf()
+
+    print("min_samples_leaf test passed!")
+
+
+    # --------------------------------------------------
+    # All Tests Completed
+    # --------------------------------------------------
+    print("\nAll Decision Tree tests passed!")
