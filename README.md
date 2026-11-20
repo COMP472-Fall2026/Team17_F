@@ -10,6 +10,9 @@ The currently documented implementations are:
 
 - **Decision Tree:** A classification algorithm implemented from scratch.
 - **Neural Network:** A feedforward neural network implemented using PyTorch.
+- **k-Nearest Neighbours (KNN):** A custom distance-based classifier evaluated on image and sentiment features.
+- **K-Means:** Unsupervised clustering experiments on sentiment features.
+- **KNN Error Analysis:** Per-class evaluation and inspection of misclassified examples.
 
 The project includes experiments for evaluating model performance under different configurations and hyperparameters.
 
@@ -17,14 +20,24 @@ The project includes experiments for evaluating model performance under differen
 
 ```text
 COMP472-Fall2026-Project/
+├── data/                           # provided CSV datasets (not tracked in Git)
 ├── models/
 │   ├── decision_tree.py
 │   ├── neural_network.py
-│   └── neural_network_training.py
+│   ├── neural_network_training.py
+│   ├── main.py
+│   ├── knn.py
+│   ├── kmeansclustering.py
+│   └── erroranalysis.py
 ├── experiments/
 │   ├── decision_tree_experiment.py
 │   ├── neural_network_experiment.py
 │   └── neural_network_evaluation.py
+├── results/
+│   ├── clustering/
+│   └── erroranalysis_knn/
+│       ├── image/
+│       └── sentiment/
 ├── best_neural_network_batch_norm.pth
 ├── requirements.txt
 ├── .gitignore
@@ -41,6 +54,12 @@ COMP472-Fall2026-Project/
 | `experiments/decision_tree_experiment.py` | Decision Tree experiments on image and sentiment datasets |
 | `experiments/neural_network_experiment.py` | Neural Network hyperparameter experiments |
 | `experiments/neural_network_evaluation.py` | Evaluation of the saved Neural Network |
+| `models/knn.py` | Custom KNN classifier: distance calculations, nearest-neighbour selection, and voting |
+| `models/main.py` | KNN dataset preparation, validation experiments, hyperparameter selection, and prediction workflow |
+| `models/kmeansclustering.py` | K-Means sentiment clustering experiments, numerical summaries, and plots |
+| `models/erroranalysis.py` | KNN validation error analysis: per-class metrics, confusion matrices, and misclassified examples |
+| `results/clustering/` | Generated clustering result tables and graphs |
+| `results/erroranalysis_knn/` | Generated KNN error-analysis reports, split into `image/` and `sentiment/` |
 | `best_neural_network_batch_norm.pth` | Saved weights of the selected Neural Network model |
 | `requirements.txt` | Python dependencies |
 
@@ -86,6 +105,8 @@ The experiment scripts read the training datasets directly from this folder.
 ### Data Preprocessing
 
 The classification experiments prepare features and labels from the CSV datasets.
+
+The KNN implementation uses the provided numerical `feature_` columns. The sample `id` is not used as a predictive feature, and the `label` column is used as the target for supervised evaluation.
 
 For the Neural Network, the image dataset is divided into training and validation subsets using an 80/20 split.
 
@@ -208,10 +229,134 @@ The evaluation script loads the saved model weights, prepares the image validati
 | Dropout | 0.4 |
 | Batch normalization | Enabled |
 
+## k-Nearest Neighbours (KNN)
+
+The KNN classifier is implemented in `models/knn.py`. It predicts a sample's label by finding the closest labeled training examples and combining their votes. The implementation supports Euclidean or cosine distance, uniform or distance-weighted voting, and batched prediction to reduce memory usage.
+
+`models/main.py` runs the KNN workflow for both image recognition and sentiment analysis. It loads the feature columns, makes stratified 80/20 training and validation splits, evaluates candidate values of `k`, and reports validation accuracy. Depending on the selected setting, features can be left unchanged, standardized, or normalized to unit length (L2). The split uses `RANDOM_SEED = 42` for reproducibility.
+
+### KNN training and validation split
+
+Before evaluating a KNN configuration, `main.py` divides each **labeled training dataset** into two non-overlapping subsets using `train_test_split` from scikit-learn:
+
+| Dataset | Total labeled examples | Training (80%) | Validation (20%) |
+|---|---:|---:|---:|
+| Image recognition | 20,000 | 16,000 | 4,000 |
+| Sentiment analysis | 12,000 | 9,600 | 2,400 |
+
+The split uses `test_size=0.2`, `random_state=RANDOM_SEED` (currently `42`), and `stratify=y`:
+
+- **80% training:** KNN stores these feature vectors and their correct labels, then uses them as neighbours when predicting validation samples.
+- **20% validation:** These held-out labeled examples are passed to the classifier for prediction. The predicted labels are compared with the actual labels to calculate validation accuracy.
+- **Stratification:** `stratify=y` preserves the relative proportions of the classes in both subsets. This is particularly useful for image recognition, which has 50 classes, and sentiment analysis, which has three classes.
+- **Reproducibility:** Keeping `RANDOM_SEED = 42` produces the same split on repeated runs, allowing a fairer comparison between different KNN settings.
+
+Preprocessing is applied **after the split**. For standardization, the feature means and standard deviations are learned from the training subset only and then applied to validation features. L2 normalization operates independently on each feature vector. This avoids using validation information to fit preprocessing parameters (data leakage).
+
+For every candidate `k` in `K_VALUES`, the script fits KNN on the same training subset and predicts the same validation subset. It calculates accuracy as the number of correct predictions divided by the number of validation examples. The configuration with the highest validation accuracy is selected. If two `k` values tie, the existing code chooses the larger `k`.
+
+This training/validation split is distinct from the separate unlabeled test CSV files; validation accuracy is calculated using examples whose correct labels are already known.
+
+### Configuring KNN experiments
+
+Open `models/main.py` and adjust the configuration values near the top:
+
+| Setting | Meaning |
+|---|---|
+| `K_VALUES` | Neighbour counts to compare on the validation set |
+| `DISTANCE_METRIC` | `"euclidean"` or `"cosine"` |
+| `VOTING_METHOD` | `"uniform"` or `"distance"` |
+| `PREPROCESSING` | `"none"`, `"standard"`, or `"l2"` |
+| `RANDOM_SEED` | Fixed seed for the validation split |
+| `BATCH_SIZE` | Maximum number of prediction samples processed together |
+
+Run from the repository root:
+
+```bash
+python models/main.py
+```
+
+`main.py` imports `KNNClassifier` from `knn.py`; `knn.py` is not run as a standalone program. Any standardization parameters are calculated using the training portion, then applied to validation data.
+
+## K-Means Clustering
+
+`models/kmeansclustering.py` investigates whether sentiment examples form meaningful groups based on their 768-dimensional feature vectors. K-Means forms clusters without looking at the true sentiment labels. The labels are used afterward to describe each cluster's composition.
+
+The script experiments with different numbers of clusters and reports inertia (within-cluster squared distances) and silhouette scores. It repeats cluster initialization and retains the best result according to inertia.
+
+### Configuring and running clustering
+
+The settings at the top of `models/kmeansclustering.py` include:
+
+- `K_CLUSTER_COUNT`: cluster counts to test (currently 2–10).
+- `MAX_NUM_ITERATIONS`: maximum iterations per K-Means run.
+- `TOLERANCE`: convergence threshold.
+- `NUM_INITALIZATIONS`: number of initialization attempts (spelling matches the current script).
+- `RANDOM_SEED`: reproducibility of the initial centroids.
+
+Run from the project root:
+
+```bash
+python models/kmeansclustering.py
+```
+
+The generated files in `results/clustering/` are:
+
+| Output | Contents |
+|---|---|
+| `kmeans_results.csv` | Inertia and silhouette results by cluster count |
+| `cluster_label_counts.csv` | Counts of true sentiment labels within each cluster |
+| `cluster_label_percentages.csv` | Percentage composition of each cluster |
+| `elbow_method.png` | Inertia plotted against cluster count |
+| `silhouette_scores.png` | Silhouette score plotted against cluster count |
+| `cluster_composition.png` | Visual breakdown of sentiment labels per cluster |
+
+## KNN Error Analysis
+
+`models/erroranalysis.py` examines the mistakes made by a selected KNN configuration on held-out validation data. It reuses `read_task()` and `prepare()` from `models/main.py` and the custom classifier in `models/knn.py`.
+
+To analyze a particular experiment, edit these settings at the top of `models/erroranalysis.py`:
+
+```python
+TASK = "sentiment"  # or "image"
+K = 40
+DISTANCE_METRIC = "euclidean"
+VOTING_METHOD = "distance"
+PREPROCESSING = "none"
+```
+
+These values are examples from the current script; change them to the configuration being analyzed. Run:
+
+```bash
+python models/erroranalysis.py
+```
+
+Reports are written to `results/erroranalysis_knn/image/` or `results/erroranalysis_knn/sentiment/`, depending on `TASK`:
+
+| Output | Contents |
+|---|---|
+| `summary.csv` | Accuracy, macro F1, configuration, and number of errors |
+| `class_metrics.csv` | Precision, recall, F1-score, and support for every class |
+| `confusion_matrix.csv` | Actual-versus-predicted label counts |
+| `confused_pairs.csv` | Most frequent misclassification pairs |
+| `misclassified_samples.csv` | IDs, actual labels, and predicted labels of incorrect examples |
+
+This evaluation uses the labeled validation split. Macro F1 gives each class equal weight when averaging its individual F1-score.
+
+### Paths for the reorganized repository
+
+All four scripts above are intended to reside in `models/`. Before running them after relocation, ensure their dataset and output paths point to the repository root rather than to `models/` itself. For example, `main.py` should use:
+
+```python
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+```
+
+The K-Means script should similarly resolve `data/sentiment_train.csv` and `results/clustering/` from the repository root, and the error-analysis script should save to `results/erroranalysis_knn/<task>/`. These path edits are made in the Python scripts; editing the README alone does not change their behavior.
+
 ## Notes
 
 - Run all commands from the repository's root directory.
 - Ensure the datasets are placed inside `data/` before running the experiments.
 - The experiment scripts select configurations using the `experiment` variable.
 - Running training experiments may overwrite existing model checkpoint files.
-- Additional classification and clustering implementations may be added as the project develops.
+- Keep generated clustering and error-analysis reports under `results/` to separate experiment outputs from source code.
