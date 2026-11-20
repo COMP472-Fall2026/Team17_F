@@ -1,0 +1,7 @@
+actual_label,predicted_label,count
+1,0,288
+1,2,245
+2,0,148
+0,2,125
+2,1,109
+0,1,62

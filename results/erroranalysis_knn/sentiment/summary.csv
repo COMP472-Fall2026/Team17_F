@@ -1,0 +1,13 @@
+task,k,distance_metric,voting_method,preprocessing,accuracy,macro_f1,validation_samples,incorrect_predictions
+sentiment,40,euclidean,distance,none,0.5929166666666666,0.5761258227005815,2400,977
+
+sentiment error analysis: accuracy=59.29%, macro f1=0.5761
+incorrect predictions: 977 / 2400
+most frequent class confusions:
+ actual_label  predicted_label  count
+            1                0    288
+            1                2    245
+            2                0    148
+            0                2    125
+            2                1    109
+            0                1     62

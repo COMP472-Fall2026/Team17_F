@@ -1,0 +1,20 @@
+task,k,distance_metric,voting_method,preprocessing,accuracy,macro_f1,validation_samples,incorrect_predictions
+image,1,cosine,distance,standard,0.534,0.5329577458283795,4000,1864
+
+
+terminal output:
+image error analysis: accuracy=53.40%, macro f1=0.5330
+incorrect predictions: 1864 / 4000
+most frequent class confusions:
+ actual_label  predicted_label  count
+            3                2      9
+            4                2      9
+            6                7      9
+           39               38      9
+           10               12      8
+           13               12      7
+           27               25      7
+           37               38      7
+           38               37      7
+            1                2      6
+
