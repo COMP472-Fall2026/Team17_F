@@ -1,0 +1,402 @@
+these represent the terminal outputs after running experiments on knn across different configurations
+
+
+1. Euclidean + None + Uniform - Baseline
+
+- IMAGE -
+k=1: validation accuracy = 53.08%
+k=3: validation accuracy = 42.65%
+k=5: validation accuracy = 42.00%
+k=6: validation accuracy = 41.83%
+k=7: validation accuracy = 40.67%
+k=10: validation accuracy = 38.82%
+k=20: validation accuracy = 35.30%
+Selected k=1 (validation accuracy 53.08%)
+
+- SENTIMENT -
+k=1: validation accuracy = 50.12%
+k=3: validation accuracy = 52.71%
+k=5: validation accuracy = 53.87%
+k=6: validation accuracy = 54.21%
+k=7: validation accuracy = 54.37%
+k=10: validation accuracy = 54.92%
+k=20: validation accuracy = 57.46%
+Selected k=20 (validation accuracy 57.46%)
+
+experimented with a few more values under this configuration, such as k=30 and k=50. As expected with increased k, image accuracy goes down but sentiment accuracy increases. 
+In the case of image accuracy, the best accuracy appears under k=1, but this suggests that larger neighbourhoods introduce competing class labels that negatively influence uniform voting.
+
+we also found that tie-breaking contributed to the decline in accuracy, particularly when increasing k from 1 to 3. 
+Of the 601 predictions that changed from correct to incorrect, 495 involved three neighbours belonging to three different classes, resulting in a three-way tie. 
+In our implementation, ties are resolved using np.argmax(), which selects the class with the smallest numerical label
+because it returns the first index of the max value, so for the 3 way tie, it most likely returned the index with the smallest index, regardless of which neighbour is closest. As a result, even when the nearest neighbour belongs to the correct class, the prediction can become incorrect simply because another class has a smaller numerical label. 
+This suggests that both the introduction of competing class labels and our tie-breaking strategy contribute to the decrease in validation accuracy as k increases.
+
+
+we find that the increase is very small for sentiment k increased by 10, but accuracy only increased by 0.3 % ish. Tried to experiment with k=50, which gave sentiment accuracy of 57.50 so dropped by 0.2 percent. 
+This means that the peak is somewhere between k = 30-50 for sentiment. played around with different values to identify the peak accuracy at k=40 for sentiment. 
+
+- IMAGE -
+k=30: validation accuracy = 33.30%
+Selected k=30 (validation accuracy 33.30%)
+
+- SENTIMENT -
+k=30: validation accuracy = 57.71%
+Selected k=30 (validation accuracy 57.71%)
+
+- SENTIMENT -
+k=50: validation accuracy = 57.50%
+Selected k=50 (validation accuracy 57.50%)
+
+- SENTIMENT -
+k=40: validation accuracy = 58.25%
+Selected k=40 (validation accuracy 58.25%)
+
+
+then played around with more experimental values and found:
+- SENTIMENT -
+k=40: validation accuracy = 58.25%
+k=70: validation accuracy = 58.54%
+k=80: validation accuracy = 58.63%
+k=90: validation accuracy = 58.46%
+k=100: validation accuracy = 57.92%
+k=120: validation accuracy = 57.92%
+Selected k=80 (validation accuracy 58.63%)
+
+This was identified as the best accuracy for this configuration, k=80.
+
+-- NEXT CONFIGURATION --
+2. Euclidean + None + Distance - Weighted voting
+- IMAGE -
+k=1: validation accuracy = 53.08%
+k=3: validation accuracy = 52.12%
+k=5: validation accuracy = 49.23%
+k=6: validation accuracy = 48.23%
+k=7: validation accuracy = 47.33%
+k=10: validation accuracy = 43.90%
+k=20: validation accuracy = 40.27%
+Selected k=1 (validation accuracy 53.08%)
+
+- SENTIMENT -
+k=1: validation accuracy = 50.12%
+k=3: validation accuracy = 52.88%
+k=5: validation accuracy = 54.46%
+k=6: validation accuracy = 54.92%
+k=7: validation accuracy = 55.25%
+k=10: validation accuracy = 56.00%
+k=20: validation accuracy = 57.29%
+Selected k=20 (validation accuracy 57.29%)
+
+
+Same pattern as config 1 for image accuracy. 
+
+Ran more experiments and found that accuracy drops after k=40, so again for sentiment, k = 40 is the best for this configuration:
+- SENTIMENT -
+k=39: validation accuracy = 59.00%
+k=40: validation accuracy = 59.29%
+k=41: validation accuracy = 58.79%
+k=42: validation accuracy = 58.58%
+Selected k=40 (validation accuracy 59.29%)
+
+
+- SENTIMENT -
+k=40: validation accuracy = 59.29%
+k=70: validation accuracy = 58.92%
+k=80: validation accuracy = 59.25%
+k=90: validation accuracy = 58.71%
+k=100: validation accuracy = 58.25%
+k=120: validation accuracy = 58.46%
+Selected k=40 (validation accuracy 59.29%)
+
+-- NEXT CONFIGURATION --
+3. Euclidean + Standard + Uniform - Standardization
+
+- IMAGE -
+k=1: validation accuracy = 43.43%
+k=3: validation accuracy = 34.40%
+k=5: validation accuracy = 31.72%
+k=6: validation accuracy = 31.00%
+k=7: validation accuracy = 30.53%
+k=10: validation accuracy = 27.80%
+k=20: validation accuracy = 24.38%
+Selected k=1 (validation accuracy 43.43%)
+
+- SENTIMENT -
+k=1: validation accuracy = 50.33%
+k=3: validation accuracy = 52.12%
+k=5: validation accuracy = 54.08%
+k=6: validation accuracy = 54.08%
+k=7: validation accuracy = 54.83%
+k=10: validation accuracy = 55.21%
+k=20: validation accuracy = 56.58%
+Selected k=20 (validation accuracy 56.58%)
+
+increasing supports increase in validation accuracy up until a certain point; k=70 presents the best accuracy of 58.92, after that it reduces. 
+interestingly, at k=40, we also observe a peak of 58.46 % accuracy, but increasing neighbors after that makes the accuracy decrease, then rises again at k=70.
+
+- SENTIMENT -
+k=50: validation accuracy = 58.08%
+k=60: validation accuracy = 58.46%
+k=70: validation accuracy = 58.92%
+Selected k=70 (validation accuracy 58.92%)
+
+
+-- NEXT CONFIGURATION --
+4. Euclidean + Standard + Distance - Standardization + weighting
+
+- IMAGE -
+k=1: validation accuracy = 43.43%
+k=3: validation accuracy = 41.60%
+k=5: validation accuracy = 37.15%
+k=6: validation accuracy = 35.75%
+k=7: validation accuracy = 34.20%
+k=10: validation accuracy = 31.20%
+k=20: validation accuracy = 26.30%
+k=30: validation accuracy = 23.95%
+k=40: validation accuracy = 22.07%
+k=50: validation accuracy = 21.02%
+k=70: validation accuracy = 19.70%
+k=80: validation accuracy = 18.98%
+Selected k=1 (validation accuracy 43.43%)
+
+- SENTIMENT -
+k=1: validation accuracy = 50.33%
+k=3: validation accuracy = 52.92%
+k=5: validation accuracy = 54.37%
+k=6: validation accuracy = 54.79%
+k=7: validation accuracy = 55.67%
+k=10: validation accuracy = 55.96%
+k=20: validation accuracy = 56.92%
+k=30: validation accuracy = 57.67%
+k=40: validation accuracy = 58.83%
+k=50: validation accuracy = 58.58%
+k=70: validation accuracy = 59.00%
+k=80: validation accuracy = 58.54%
+Selected k=70 (validation accuracy 59.00%)
+
+5. Euclidean + L2 + Uniform - Normalized Euclidean
+- IMAGE -
+k=1: validation accuracy = 53.08%
+k=3: validation accuracy = 42.68%
+k=5: validation accuracy = 42.00%
+k=6: validation accuracy = 41.83%
+k=7: validation accuracy = 40.75%
+k=10: validation accuracy = 38.82%
+k=20: validation accuracy = 35.33%
+k=30: validation accuracy = 33.32%
+k=40: validation accuracy = 31.50%
+k=50: validation accuracy = 30.55%
+k=70: validation accuracy = 29.00%
+k=80: validation accuracy = 28.12%
+Selected k=1 (validation accuracy 53.08%)
+
+- SENTIMENT -
+k=1: validation accuracy = 51.17%
+k=3: validation accuracy = 52.29%
+k=5: validation accuracy = 54.67%
+k=6: validation accuracy = 54.75%
+k=7: validation accuracy = 54.96%
+k=10: validation accuracy = 55.96%
+k=20: validation accuracy = 56.79%
+k=30: validation accuracy = 57.71%
+k=40: validation accuracy = 57.75%
+k=50: validation accuracy = 57.54%
+k=70: validation accuracy = 58.00%
+k=80: validation accuracy = 57.71%
+Selected k=70 (validation accuracy 58.00%)
+
+
+played around with values in the 100s and 1000s, but this was the best validation accuracy i could obtain.
+
+
+6. Euclidean + L2 + Distance - Normalized Euclidean + weighting
+
+- IMAGE -
+k=1: validation accuracy = 53.08%
+k=3: validation accuracy = 52.12%
+k=5: validation accuracy = 49.23%
+k=6: validation accuracy = 48.23%
+k=7: validation accuracy = 47.33%
+k=10: validation accuracy = 43.92%
+k=20: validation accuracy = 40.27%
+k=30: validation accuracy = 37.05%
+k=40: validation accuracy = 35.27%
+k=50: validation accuracy = 34.10%
+k=70: validation accuracy = 32.00%
+k=80: validation accuracy = 31.30%
+Selected k=1 (validation accuracy 53.08%)
+
+- SENTIMENT -
+k=1: validation accuracy = 51.17%
+k=3: validation accuracy = 53.25%
+k=5: validation accuracy = 54.37%
+k=6: validation accuracy = 55.21%
+k=7: validation accuracy = 55.58%
+k=10: validation accuracy = 56.33%
+k=20: validation accuracy = 56.75%
+k=30: validation accuracy = 57.83%
+k=40: validation accuracy = 58.38%
+k=50: validation accuracy = 58.04%
+k=70: validation accuracy = 58.58%
+k=80: validation accuracy = 57.79%
+Selected k=70 (validation accuracy 58.58%)
+
+
+7. Cosine + None + Uniform - Cosine baseline
+- IMAGE -
+k=1: validation accuracy = 53.08%
+k=3: validation accuracy = 42.65%
+k=5: validation accuracy = 42.00%
+k=6: validation accuracy = 41.83%
+k=7: validation accuracy = 40.67%
+k=10: validation accuracy = 38.82%
+k=20: validation accuracy = 35.30%
+k=30: validation accuracy = 33.30%
+k=40: validation accuracy = 31.45%
+k=50: validation accuracy = 30.53%
+k=60: validation accuracy = 29.55%
+k=70: validation accuracy = 29.07%
+k=80: validation accuracy = 28.07%
+Selected k=1 (validation accuracy 53.08%)
+
+- SENTIMENT -
+k=1: validation accuracy = 51.17%
+k=3: validation accuracy = 52.29%
+k=5: validation accuracy = 54.67%
+k=6: validation accuracy = 54.75%
+k=7: validation accuracy = 54.96%
+k=10: validation accuracy = 55.96%
+k=20: validation accuracy = 56.79%
+k=30: validation accuracy = 57.71%
+k=40: validation accuracy = 57.75%
+k=50: validation accuracy = 57.54%
+k=60: validation accuracy = 57.67%
+k=70: validation accuracy = 58.00%
+k=80: validation accuracy = 57.71%
+Selected k=70 (validation accuracy 58.00%)
+
+same idea, tested other higher values, but 70 appears to be the best k in this case as well. 
+
+
+8. Cosine + None + Distance - Cosine weighted
+
+- IMAGE -
+k=1: validation accuracy = 53.08%
+k=3: validation accuracy = 52.12%
+k=5: validation accuracy = 49.23%
+k=10: validation accuracy = 43.90%
+k=20: validation accuracy = 40.27%
+k=30: validation accuracy = 37.03%
+k=40: validation accuracy = 35.30%
+k=50: validation accuracy = 34.02%
+k=60: validation accuracy = 32.55%
+k=70: validation accuracy = 32.02%
+k=80: validation accuracy = 31.32%
+Selected k=1 (validation accuracy 53.08%)
+
+- SENTIMENT -
+k=1: validation accuracy = 51.17%
+k=3: validation accuracy = 53.25%
+k=5: validation accuracy = 54.37%
+k=10: validation accuracy = 56.33%
+k=20: validation accuracy = 56.75%
+k=30: validation accuracy = 57.83%
+k=40: validation accuracy = 58.38%
+k=50: validation accuracy = 58.04%
+k=60: validation accuracy = 58.04%
+k=70: validation accuracy = 58.58%
+k=80: validation accuracy = 57.79%
+Selected k=70 (validation accuracy 58.58%)
+
+
+9. Cosine + Standard + Uniform - Standardized cosine
+
+- IMAGE -
+k=1: validation accuracy = 53.40%
+k=3: validation accuracy = 42.52%
+k=5: validation accuracy = 42.75%
+k=10: validation accuracy = 40.45%
+k=20: validation accuracy = 36.90%
+k=30: validation accuracy = 35.33%
+k=40: validation accuracy = 33.65%
+k=50: validation accuracy = 32.20%
+k=60: validation accuracy = 31.57%
+k=70: validation accuracy = 31.10%
+k=80: validation accuracy = 30.30%
+Selected k=1 (validation accuracy 53.40%)
+
+- SENTIMENT -
+k=1: validation accuracy = 49.71%
+k=3: validation accuracy = 52.17%
+k=5: validation accuracy = 54.75%
+k=10: validation accuracy = 55.83%
+k=20: validation accuracy = 56.71%
+k=30: validation accuracy = 56.79%
+k=40: validation accuracy = 57.50%
+k=50: validation accuracy = 57.38%
+k=60: validation accuracy = 57.96%
+k=70: validation accuracy = 57.79%
+k=80: validation accuracy = 58.17%
+Selected k=80 (validation accuracy 58.17%)
+
+running additional experiments since we observed a new trend, accuracy decreases after k=80
+
+- IMAGE -
+k=80: validation accuracy = 30.30%
+k=90: validation accuracy = 30.00%
+k=100: validation accuracy = 29.15%
+k=120: validation accuracy = 28.43%
+k=140: validation accuracy = 26.88%
+Selected k=80 (validation accuracy 30.30%)
+
+- SENTIMENT -
+k=80: validation accuracy = 58.17%
+k=90: validation accuracy = 57.67%
+k=100: validation accuracy = 57.83%
+k=120: validation accuracy = 57.88%
+k=140: validation accuracy = 57.75%
+Selected k=80 (validation accuracy 58.17%)
+
+10. Cosine + Standard + Distance - Standardized cosine + weighting
+
+- IMAGE -
+k=1: validation accuracy = 53.40%
+k=3: validation accuracy = 52.65%
+k=5: validation accuracy = 50.30%
+k=6: validation accuracy = 49.68%
+k=7: validation accuracy = 48.80%
+k=10: validation accuracy = 46.20%
+k=20: validation accuracy = 42.25%
+k=30: validation accuracy = 39.98%
+k=40: validation accuracy = 37.55%
+k=50: validation accuracy = 36.08%
+k=60: validation accuracy = 34.95%
+k=70: validation accuracy = 34.27%
+k=80: validation accuracy = 33.00%
+Selected k=1 (validation accuracy 53.40%)
+
+- SENTIMENT -
+k=1: validation accuracy = 49.71%
+k=3: validation accuracy = 52.83%
+k=5: validation accuracy = 55.42%
+k=6: validation accuracy = 55.12%
+k=7: validation accuracy = 55.67%
+k=10: validation accuracy = 55.92%
+k=20: validation accuracy = 56.92%
+k=30: validation accuracy = 57.42%
+k=40: validation accuracy = 57.79%
+k=50: validation accuracy = 57.12%
+k=60: validation accuracy = 58.21%
+k=70: validation accuracy = 57.88%
+k=80: validation accuracy = 58.25%
+Selected k=80 (validation accuracy 58.25%)
+
+
+again, experimented with larger values and identified that k=100 produces 58.42 percent accuracy, but increasing k after that shows decline in accuracy, but then again at k=180,
+there is an increase:
+- SENTIMENT -
+k=155: validation accuracy = 58.42%
+k=160: validation accuracy = 58.29%
+k=170: validation accuracy = 58.33%
+k=180: validation accuracy = 58.54%
+Selected k=180 (validation accuracy 58.54%)
